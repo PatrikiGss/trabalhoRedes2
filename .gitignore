@@ -1,2 +1,7 @@
 AV3.pdf
 __pycache__
+*.exe
+*.zip
+*.iso
+*.tar.gz
+*.pdf
