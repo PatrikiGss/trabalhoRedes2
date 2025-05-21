@@ -4,52 +4,69 @@ import json
 
 class Broker:              
     
-    Topico_Clientes = {}    #este é o dicionario que vai armazenar os clientes inscritos em cada topico
+    Topico_Clientes = {}    # dicionário que vai armazenar os clientes inscritos em cada tópico
 
     def Tratando_Cliente(self, conexao, endereco): 
-        while True:                                 # Loop para manter a comunicação com o cliente
+        print(f"Cliente conectado: {endereco}")  # print ao conectar cliente
+        while True:                                 
             try:
-                dados = conexao.recv(1024).decode()     # Recebe dados do cliente e decodifica de bytes para string
+                dados = conexao.recv(1024).decode()     
                 if not dados:                          
+                    print(f"Cliente {endereco} desconectou")  # print ao desconectar
                     break
-                pacote = json.loads(dados)              # Converte a string JSON em dicionário
-                tipo = pacote.get("type")               # pega o tipo do pacote (subscribe ou publish)
+                pacote = json.loads(dados)              
+                tipo = pacote.get("type")               
 
-                if tipo == "subscribe" or tipo == "SUBSCRIBE":  # Verifica se é uma inscrição em tópico
-                    topico = pacote["topico"]                   # Obtém o nome do tópico
-                    if topico not in self.Topico_Clientes:      # Se o tópico não existe, cria uma lista
+                if tipo == "subscribe" or tipo == "SUBSCRIBE":  
+                    topico = pacote["topico"]                   
+                    if topico not in self.Topico_Clientes:      
                         self.Topico_Clientes[topico] = []
-                    self.Topico_Clientes[topico].append(conexao)  # Adiciona a conexão à lista de inscritos
-                    print(f"{endereco} se inscreveu no topico: {topico}")  # Mensagem de confirmação no servidor
+                    self.Topico_Clientes[topico].append(conexao)  
+                    print(f"{endereco} se inscreveu no tópico: {topico}")
 
-                elif tipo == "publish" or tipo == "PUBLISH":     # Verifica se é uma publicação em tópico
-                    topico = pacote["topico"]                    # Obtém o nome do tópico
-                    mensagem = pacote["message"]                 # Obtém a mensagem a ser publicada
-                    for cliente in self.Topico_Clientes.get(topico, []):  # Envia para todos os clientes inscritos
+                elif tipo == "publish" or tipo == "PUBLISH":
+                    topico = pacote["topico"]
+                    mensagem = pacote["mensagem"]
+                    print(f"Publicação recebida do cliente {endereco} -> tópico: '{topico}', mensagem: '{mensagem}'")  # print da publicação
+                    if topico not in self.Topico_Clientes:
+                        self.Topico_Clientes[topico] = []
+                    for cliente in self.Topico_Clientes[topico]:  
                         try:
-                            cliente.sendall(json.dumps({            # Envia a mensagem em formato JSON
+                            cliente.sendall(json.dumps({            
                                 "topico": topico,
                                 "mensagem": mensagem
-                            }).encode())                             # Codifica para bytes antes de enviar
-                        except (OSError, socket.error):             # Ignora erros de envio
+                            }).encode())                             
+                        except (OSError, socket.error):             
                             pass
-            except (json.JSONDecodeError, ConnectionResetError, OSError):  # Trata erros comuns de conexão/JSON
+                elif tipo == "lista":
+                    print(f"Cliente {endereco} pediu lista de tópicos")  # print ao pedir lista
+                    topicos = list(self.Topico_Clientes.keys())
+                    try:
+                        conexao.sendall(json.dumps({
+                            "type": "lista",
+                            "topicos": topicos
+                        }).encode())
+                    except(OSError, socket.error):
+                        pass
+            except (json.JSONDecodeError, ConnectionResetError, OSError):  
+                print(f"Erro ou desconexão do cliente {endereco}")
                 break
         conexao.close()     
 
     def Iniciando_Broker(self):      
         servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
-        servidor.bind(("localhost", 5050))         
+        servidor.bind(("localhost", 6666))         
         servidor.listen()                          
-        print("servidor aguardando conexoes na porta 5050...")  
+        print("Servidor aguardando conexões na porta 6666...")  
 
-        while True:                                # Loop infinito para aceitar novas conexões
-            conexao, endereco = servidor.accept()  # Aceita uma nova conexão e obtém o endereço do cliente
-            threading.Thread(target=self.Tratando_Cliente, args=(conexao, endereco)).start()  # Inicia uma nova thread para lidar com o cliente
+        while True:                                
+            conexao, endereco = servidor.accept()  
+            threading.Thread(target=self.Tratando_Cliente, args=(conexao, endereco)).start()  
 
 if __name__ == "__main__":  
     broker = Broker()       
     broker.Iniciando_Broker()  
+
                               
 """
 socket.AF_INET → Endereço IP no padrão IPv4
