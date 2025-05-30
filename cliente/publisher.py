@@ -1,7 +1,8 @@
 import socket                 
 import json                  
 
-while True:               
+while True: 
+             
     topico = input("Insira o tópico: ")            
     mensagem = input("Insira a mensagem: ")        
     pacote = {                                     # Cria um dicionário com os dados da publicação
@@ -9,7 +10,8 @@ while True:
         "topico": topico,                          # Tópico para o qual a mensagem será enviada
         "mensagem": mensagem                       # Conteúdo da mensagem
     }
-
+    lista_de_topicos=[topico]
+    print(f"topicos existentes: {topico}")
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  
     s.connect(("localhost", 6666))                
 

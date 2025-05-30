@@ -1,7 +1,7 @@
 import socket               
 import threading           
-import json                
-
+import json  
+        
 class Broker:              
     
     Topico_Clientes = {}    
