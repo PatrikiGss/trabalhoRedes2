@@ -20,8 +20,7 @@ while True:
     pacote_bytes = pacote_json.encode("utf-8")    # Codifica a string JSON para bytes (necessário para enviar pelo socket)
     s.sendall(pacote_bytes)                       # Envia os bytes para o broker
     print(f"Mensagem publicada no tópico {topico}: {mensagem}")  
-
-    s.close()                                  
+                                  
 
     sair = input("Deseja enviar outra mensagem? (s/n): ") 
     if sair.lower() != 's':                       
