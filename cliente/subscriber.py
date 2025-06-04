@@ -13,24 +13,7 @@ class Subscriber:
         self.topico = None
         # Aqui poderia iniciar diretamente a inscrição, mas está comentado
         # self.subscribe()
-
-    def ListaTopicos(self):
-        """Solicita a lista de tópicos disponíveis no broker."""
-        pedido = {
-            "type": "lista"
-        }
-        # Envia o pedido para o broker
-        self.cliente.sendall(json.dumps(pedido).encode())
-        dados = self.cliente.recv(1024).decode()
-        # Converte o JSON recebido em um dicionário Python
-        resposta = json.loads(dados)
-        # Se o tipo for 'lista', retorna a lista de tópicos
-        if resposta.get("type") == "lista":
-            return resposta.get("topicos", [])
         
-        # Caso não seja uma resposta válida, retorna lista vazia
-        return []
-
     def escutar(self):
         """Escuta mensagens dos tópicos inscritos."""
         while True:
@@ -53,6 +36,23 @@ class Subscriber:
                 # Caso aconteça algum erro na recepção
                 print(f"Erro ao receber dados: {e}")
                 break
+
+    def ListaTopicos(self):
+        """Solicita a lista de tópicos disponíveis no broker."""
+        pedido = {
+            "type": "lista"
+        }
+        # Envia o pedido para o broker
+        self.cliente.sendall(json.dumps(pedido).encode())
+        dados = self.cliente.recv(1024).decode()
+        # Converte o JSON recebido em um dicionário Python
+        resposta = json.loads(dados)
+        # Se o tipo for 'lista', retorna a lista de tópicos
+        if resposta.get("type") == "lista":
+            return resposta.get("topicos", [])
+        
+        # Caso não seja uma resposta válida, retorna lista vazia
+        return []
 
     def subscribe(self, topico):
         """Envia requisição de inscrição a um tópico."""
