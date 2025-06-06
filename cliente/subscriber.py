@@ -4,45 +4,28 @@ import json
 
 class Subscriber:
     def __init__(self):
-        """Inicializa o assinante e conecta ao broker."""
-        # Cria um socket TCP
         self.cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # Faz conexão com o broker no endereço 'localhost' e porta 6666
         self.cliente.connect(("localhost", 6666))
-        # Armazena o tópico atual (nesse modelo, só um por vez)
         self.topico = None
-        # Aqui poderia iniciar diretamente a inscrição, mas está comentado
-        # self.subscribe()
+        self.mensagens=[]
         
     def escutar(self):
         """Escuta mensagens dos tópicos inscritos."""
         while True:
             try:
-                # Aguarda a chegada de dados do broker
                 dados = self.cliente.recv(1024).decode()
-
-                # Se não recebeu nada, provavelmente a conexão foi encerrada
                 if not dados:
                     print("Conexão encerrada pelo servidor.")
                     break
-
-                # Converte os dados JSON em um dicionário
                 pacote = json.loads(dados)
-
-                # Exibe a mensagem recebida, mostrando de qual tópico veio
-                print(f"Mensagem recebida do tópico '{pacote['topico']}': {pacote['mensagem']}")
-
+                self.mensagens.append(f"[{pacote['topico']}] {pacote['mensagem']}")
             except Exception as e:
-                # Caso aconteça algum erro na recepção
-                print(f"Erro ao receber dados: {e}")
+                self.mensagens.append(f"[ERRO] {e}")
                 break
 
     def ListaTopicos(self):
         """Solicita a lista de tópicos disponíveis no broker."""
-        pedido = {
-            "type": "lista"
-        }
-        # Envia o pedido para o broker
+        pedido = {"type": "lista"}
         self.cliente.sendall(json.dumps(pedido).encode())
         dados = self.cliente.recv(1024).decode()
         # Converte o JSON recebido em um dicionário Python
@@ -50,32 +33,20 @@ class Subscriber:
         # Se o tipo for 'lista', retorna a lista de tópicos
         if resposta.get("type") == "lista":
             return resposta.get("topicos", [])
-        
-        # Caso não seja uma resposta válida, retorna lista vazia
         return []
 
     def subscribe(self, topico):
         """Envia requisição de inscrição a um tópico."""
         # Define o tópico atual (sobrescrevendo qualquer anterior)
         self.topico = topico
-
-        # Monta a mensagem de inscrição no formato JSON
         mensagem_sub = {
             "type": "subscribe",
             "topico": self.topico
         }
-
-        # Envia a mensagem de inscrição para o broker
         self.cliente.sendall(json.dumps(mensagem_sub).encode())
-
-        # Confirma no terminal que a inscrição foi feita
-        print(f"Inscrito no tópico: {self.topico}")
-
-        # Inicia uma nova thread que executa a função escutar()
         threading.Thread(target=self.escutar, daemon=True).start()
 
-    def iniciar(self):
-        """Menu interativo para o usuário escolher tópicos."""
+"""   def iniciar(self):
         while True:
             # Pega a lista de tópicos disponíveis no broker
             topicos = self.ListaTopicos()
@@ -104,3 +75,4 @@ class Subscriber:
 if __name__ == "__main__":
     sub = Subscriber()
     sub.iniciar()
+"""
