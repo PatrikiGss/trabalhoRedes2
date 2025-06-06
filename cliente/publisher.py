@@ -1,27 +1,42 @@
-import socket                 
-import json                  
+import socket
+import json
 
-while True: 
-             
-    topico = input("Insira o tópico: ")            
-    mensagem = input("Insira a mensagem: ")        
-    pacote = {                                     # Cria um dicionário com os dados da publicação
-        "type": "publish",                         # Tipo da mensagem (publicação)
-        "topico": topico,                          # Tópico para o qual a mensagem será enviada
-        "mensagem": mensagem                       # Conteúdo da mensagem
-    }
-    lista_de_topicos=[topico]
-    print(f"topicos existentes: {topico}")
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  
-    s.connect(("localhost", 6666))                
 
-    pacote_json = json.dumps(pacote)              # Converte o dicionário em uma string JSON
+def publicar_mensagem(topico: str, mensagem: str, host="localhost", porta=6666):
 
-    pacote_bytes = pacote_json.encode("utf-8")    # Codifica a string JSON para bytes (necessário para enviar pelo socket)
-    s.sendall(pacote_bytes)                       # Envia os bytes para o broker
-    print(f"Mensagem publicada no tópico {topico}: {mensagem}")  
-                                  
+    try:
+        pacote = {
+            "type": "publish",
+            "topico": topico,
+            "mensagem": mensagem
+        }
 
-    sair = input("Deseja enviar outra mensagem? (s/n): ") 
-    if sair.lower() != 's':                       
-        break
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        s.connect((host, porta))
+
+        # Serializa para JSON e converte em bytes
+        pacote_json = json.dumps(pacote)
+        pacote_bytes = pacote_json.encode("utf-8")
+
+        # Envia os dados
+        s.sendall(pacote_bytes)
+
+        s.close()
+
+        return f"✅ Mensagem publicada no tópico '{topico}': {mensagem}"
+
+    except Exception as e:
+        return f"❌ Erro ao publicar mensagem: {e}"   
+"""
+    Publica uma mensagem em um tópico específico no broker via TCP.
+
+    Parâmetros:
+    - topico (str): O nome do tópico.
+    - mensagem (str): O conteúdo da mensagem.
+    - host (str): Endereço do broker (padrão: localhost).
+    - porta (int): Porta do broker (padrão: 6666).
+
+    Retorno:
+    - str: Mensagem de confirmação ou erro.
+"""
