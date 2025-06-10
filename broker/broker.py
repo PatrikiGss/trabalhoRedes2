@@ -19,22 +19,29 @@ class Broker:
 
                 if tipo == "subscribe" or tipo == "SUBSCRIBE":  # Se o cliente quer se inscrever em um tópico
                     topico = pacote["topico"]                   # Obtém o nome do tópico
+                    mensagem = pacote["mensagem"]               # Obtém a mensagem a ser publicada
+                    print(f"Publicação recebida do cliente {endereco} -> tópico: '{topico}', mensagem: '{mensagem}'")  # Log da publicação
                     if topico not in self.Topico_Clientes:      # Se o tópico ainda não existe no dicionário
                         self.Topico_Clientes[topico] = []       # Cria uma lista vazia para os clientes do tópico
                     self.Topico_Clientes[topico].append(conexao)  # Adiciona a conexão do cliente à lista do tópico
                     print(f"{endereco} se inscreveu no tópico: {topico}")  # Informa a inscrição no tópico
+                    for cliente in self.Topico_Clientes[topico]:  # Para cada cliente inscrito no tópico
+                        try:
+                            cliente.sendall(json.dumps({            # Envia a mensagem para o cliente
+                               # "topico": topico,                   # Inclui o nome do tópico
+                               "mensagem": mensagem                # Inclui a mensagem publicada
+                            }).encode())                            # Codifica como bytes antes de enviar
+                        except (OSError, socket.error):             # Em caso de erro ao enviar (cliente desconectado, etc.)
+                            pass
 
                 elif tipo == "publish" or tipo == "PUBLISH":    # Se o cliente quer publicar uma mensagem
                     topico = pacote["topico"]                   # Obtém o nome do tópico
-                    mensagem = pacote["mensagem"]               # Obtém a mensagem a ser publicada
-                    print(f"Publicação recebida do cliente {endereco} -> tópico: '{topico}', mensagem: '{mensagem}'")  # Log da publicação
                     if topico not in self.Topico_Clientes:      # Se ninguém está inscrito nesse tópico
                         self.Topico_Clientes[topico] = []       # Cria a lista (mesmo que vazia)
                     for cliente in self.Topico_Clientes[topico]:  # Para cada cliente inscrito no tópico
                         try:
                             cliente.sendall(json.dumps({            # Envia a mensagem para o cliente
                                 "topico": topico,                   # Inclui o nome do tópico
-                                "mensagem": mensagem                # Inclui a mensagem publicada
                             }).encode())                            # Codifica como bytes antes de enviar
                         except (OSError, socket.error):             # Em caso de erro ao enviar (cliente desconectado, etc.)
                             pass                                    # Ignora e segue para o próximo cliente

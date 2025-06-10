@@ -2,13 +2,12 @@ import socket
 import json
 
 
-def publicar_mensagem(topico: str, mensagem: str, host="localhost", porta=6666):
-
+def publicar_topico(topico: str, host="localhost", porta=6666):
     try:
         pacote = {
             "type": "publish",
             "topico": topico,
-            "mensagem": mensagem
+            
         }
 
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -24,19 +23,7 @@ def publicar_mensagem(topico: str, mensagem: str, host="localhost", porta=6666):
 
         s.close()
 
-        return f"✅ Mensagem publicada no tópico '{topico}': {mensagem}"
+        return f"Tópico publicado:  {topico}"
 
     except Exception as e:
-        return f"❌ Erro ao publicar mensagem: {e}"   
-"""
-    Publica uma mensagem em um tópico específico no broker via TCP.
-
-    Parâmetros:
-    - topico (str): O nome do tópico.
-    - mensagem (str): O conteúdo da mensagem.
-    - host (str): Endereço do broker (padrão: localhost).
-    - porta (int): Porta do broker (padrão: 6666).
-
-    Retorno:
-    - str: Mensagem de confirmação ou erro.
-"""
+        return f"Erro ao publicar topico: {e}"   
