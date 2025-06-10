@@ -1,6 +1,6 @@
 import streamlit as st
 from publisher import publicar_mensagem   
-st.title(" Publicador")
+st.title("PUBLISHER")
 st.write("Envie mensagens para um tópico específico")
 topico = st.text_input("Insira o tópico:")
 mensagem = st.text_area("Insira a mensagem:")
