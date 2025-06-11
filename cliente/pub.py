@@ -1,13 +1,17 @@
 import streamlit as st
-from publisher import publicar_topico   
-st.title("PUBLISHER")
-st.write("Envie mensagens para um tópico específico")
-topico = st.text_input("Insira o tópico:")
+from publisher import criar_topico
 
-# Botão para publicar
-if st.button("🚀 Publicar topico"):
-    if topico.strip() == "":
-        st.warning("⚠️ Por favor, preencha o tópico e a mensagem antes de enviar.")
+
+st.title("PUBLISHER")
+
+# Campo para o tópico
+topico = st.text_input("🧩 Nome do novo tópico")
+
+
+# Botão para criar o tópico
+if st.button("📌 Criar Tópico"):
+    if not topico.strip():
+        st.warning("⚠️ Por favor, preencha o nome do tópico.")
     else:
-        resultado = publicar_topico(topico)
-        st.success(resultado)
+        resultado = criar_topico(topico)
+        st.success(f"✅ {resultado}")

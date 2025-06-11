@@ -1,75 +1,51 @@
 import streamlit as st
-from subscriber import Subscriber
-from streamlit_autorefresh import st_autorefresh
-import socket
-import json
+import time
+from subscriber import Subscriber  
 
-# Função auxiliar para publicação
-def publicar_mensagem(topico: str, mensagem: str, host="localhost", porta=6666):
-    try:
-        pacote = {
-            "type": "publish",
-            "topico": topico,
-            "mensagem": mensagem
-        }
+# Inicializa ou recupera uma instância do Subscriber
+if 'subscriber' not in st.session_state:
+    st.session_state.subscriber = Subscriber()
+    st.session_state.inscrito = False
+    st.session_state.topico_atual = ""
+    st.session_state.mensagens_recebidas = []
 
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((host, porta))
-        s.sendall(json.dumps(pacote).encode("utf-8"))
-        s.close()
+subscriber = st.session_state.subscriber
 
-        return f"Mensagem publicada no tópico: {topico}"
-    except Exception as e:
-        return f"Erro ao publicar mensagem: {e}"
+st.title("SUBSCRIBER")
 
-# Evita recriar o objeto em cada execução
-if 'sub' not in st.session_state:
-    st.session_state.sub = Subscriber()
-sub = st.session_state.sub
+# Seção para listar e escolher tópicos
+st.header("Inscrever-se em um Tópico")
 
-st.title("📥 Assinante de Tópicos (Subscriber)")
+if st.button("Lista de tópicos"):
+    st.session_state.topicos = subscriber.ListaTopicos()
 
-# Botão para listar os tópicos
-if st.button("🔍 Listar Tópicos Disponíveis"):
-    topicos = sub.ListaTopicos()
-    if topicos:
-        st.session_state.topicos_disponiveis = topicos
-    else:
-        st.warning("Nenhum tópico disponível no momento.")
+topicos = st.session_state.get("topicos", [])
 
-# Selectbox com tópicos disponíveis
-topico_escolhido = st.selectbox(
-    "Selecione um tópico existente:",
-    st.session_state.get('topicos_disponiveis', []),
-    key="topico_select"
-)
-
-# Campo de mensagem
-mensagem = st.text_area("Insira a mensagem para publicação:")
-
-# Botão de publicação
-if st.button("📤 Publicar Mensagem"):
-    if not topico_escolhido or not mensagem.strip():
-        st.warning("⚠️ Por favor, preencha o tópico e a mensagem.")
-    else:
-        resultado = publicar_mensagem(topico_escolhido, mensagem)
-        st.success(resultado)
-
-# Botão de inscrição
-if st.button("✅ Inscrever-se"):
-    if topico_escolhido:
-        sub.subscribe(topico_escolhido)
-        st.success(f"Inscrito no tópico: {topico_escolhido}")
-    else:
-        st.error("Informe um tópico válido.")
-
-# Auto-refresh a cada 1 segundo
-st_autorefresh(interval=1000, key="auto_refresh")
-
-# Mensagens recebidas
-st.subheader("📨 Mensagens Recebidas:")
-if hasattr(sub, 'mensagens') and sub.mensagens:
-    for msg in sub.mensagens[::-1]:
-        st.write(msg)
+if topicos:
+    topico_selecionado = st.selectbox("Escolha um tópico para se inscrever", topicos)
+    if st.button("Inscrever-se"):
+        if not st.session_state.inscrito:
+            subscriber.iniciar_escuta(topico_selecionado)
+            st.session_state.inscrito = True
+            st.session_state.topico_atual = topico_selecionado
 else:
-    st.info("Nenhuma mensagem recebida ainda.")
+    st.text("Nenhum tópico disponível. Clique no botão acima para atualizar.")
+
+# Seção para enviar mensagens
+if st.session_state.inscrito:
+    st.header("Publicar Mensagem")
+    mensagem = st.text_input("Digite sua mensagem")
+    if st.button("Enviar mensagem"):
+        subscriber.publish(st.session_state.topico_atual, mensagem)
+
+# Exibição das mensagens recebidas
+st.header("Mensagens Recebidas")
+placeholder = st.empty()
+
+# Atualiza as mensagens recebidas (exibe as últimas 10)
+while True:
+    if subscriber.mensagens:
+        novas = subscriber.mensagens[len(st.session_state.mensagens_recebidas):]
+        st.session_state.mensagens_recebidas.extend(novas)
+        placeholder.text("\n".join(st.session_state.mensagens_recebidas[-10:]))
+    time.sleep(1)
