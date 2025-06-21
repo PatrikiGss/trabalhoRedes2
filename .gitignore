@@ -6,3 +6,7 @@ __pycache__
 *.tar.gz
 *.pdf
 venv
+__init__.py
+autenticacao/keys/*_priv.pem
+autenticacao/keys/*.pem
+
