@@ -1,12 +1,11 @@
-__pycache__
+__pycache__/
 *.py[cod]
 *.exe
 *.zip
 *.iso
 *.tar.gz
 *.pdf
-venv
-__init__.py
+venv/
 autenticacao/keys/*_priv.pem
-autenticacao/keys/*.pem
-
+autenticacao/keys/*_pub.pem
+autenticacao/keys/*.csr
