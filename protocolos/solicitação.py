@@ -5,8 +5,8 @@ from cryptography.hazmat.backends import default_backend
 from pathlib import Path
 
 # Caminhos
-priv_path = Path("autenticacao/keys/cliente_priv.pem")
-csr_path = Path("autenticacao/keys/patriki.csr")
+priv_path = Path("broker/auth/broker_priv.pem")
+csr_path = Path("broker/auth/broker.csr")
 
 # Carregar a chave privada existente
 with open(priv_path, "rb") as f:

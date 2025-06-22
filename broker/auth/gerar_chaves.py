@@ -1,4 +1,4 @@
-from auth.chaves import GerenciadorChaves
+from broker.auth.chaves import GerenciadorChaves
 
 chaves = GerenciadorChaves()
 chaves.gerar_chave_privada()

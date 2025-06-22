@@ -3,7 +3,7 @@ from cryptography.hazmat.primitives import serialization
 from pathlib import Path
 
 class GerenciadorChaves:
-    def __init__(self, pasta="autenticacao/keys", usuario="cliente"):
+    def __init__(self, pasta="broker/auth", usuario="broker"):
         self.pasta = Path(pasta)
         self.usuario = usuario
         self.priv_path = self.pasta / f"{usuario}_priv.pem"
