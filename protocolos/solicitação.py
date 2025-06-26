@@ -1,37 +1,49 @@
 from cryptography import x509
-from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.backends import default_backend
+from cryptography.x509.oid import NameOID
+from datetime import datetime, timedelta
 from pathlib import Path
 
 # Caminhos
-priv_path = Path("broker/auth/broker_priv.pem")
-csr_path = Path("broker/auth/broker.csr")
+CAMINHO_CHAVE_PRIVADA  = Path("broker/auth/broker_priv.pem")
+CAMINHO_CERTIFICADO  = Path("broker/auth/broker.crt")
 
-# Carregar a chave privada existente
-with open(priv_path, "rb") as f:
-    chave_privada = serialization.load_pem_private_key(f.read(), password=None, backend=default_backend())
+# 1. Carregar a chave privada
+with open(CAMINHO_CHAVE_PRIVADA, "rb") as f:
+    chave_privada = serialization.load_pem_private_key(
+        f.read(),
+        password=None,
+        backend=default_backend()
+    )
 
-# Construir os dados de identidade
+# 2. Informações do "dono" do certificado
 nome = x509.Name([
-    x509.NameAttribute(NameOID.COUNTRY_NAME, "BR"),
-    x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "SC"),
-    x509.NameAttribute(NameOID.LOCALITY_NAME, "Lages"),
-    x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Instituto Federal de Santa Catarina"),
-    x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "Ciência Da Computação"),
-    x509.NameAttribute(NameOID.COMMON_NAME, "Patriki de Oliveira Góss"),
-    x509.NameAttribute(NameOID.EMAIL_ADDRESS, "patriki.g2004@aluno.ifsc.edu.br"),
+    x509.NameAttribute(NameOID.COUNTRY_NAME, u"BR"),
+    x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, u"São Paulo"),
+    x509.NameAttribute(NameOID.LOCALITY_NAME, u"SistemaMqtt"),
+    x509.NameAttribute(NameOID.ORGANIZATION_NAME, u"Instituto Federal de Santa Catarina"),
+    x509.NameAttribute(NameOID.COMMON_NAME, u"localhost"),
 ])
 
-# Criar o CSR
-csr = (
-    x509.CertificateSigningRequestBuilder()
+# 3. Construção do certificado
+certificado = (
+    x509.CertificateBuilder()
     .subject_name(nome)
-    .sign(chave_privada, hashes.SHA256(), default_backend())
+    .issuer_name(nome)  # Autoassinado
+    .public_key(chave_privada.public_key())
+    .serial_number(x509.random_serial_number())
+    .not_valid_before(datetime.utcnow())
+    .not_valid_after(datetime.utcnow() + timedelta(days=365))  # 1 ano de validade
+    .add_extension(
+        x509.BasicConstraints(ca=True, path_length=None),
+        critical=True
+    )
+    .sign(private_key=chave_privada, algorithm=hashes.SHA256(), backend=default_backend())
 )
 
-# Salvar em arquivo .csr (formato PEM)
-with open(csr_path, "wb") as f:
-    f.write(csr.public_bytes(serialization.Encoding.PEM))
+# 4. Salvar o certificado
+with open(CAMINHO_CERTIFICADO, "wb") as f:
+    f.write(certificado.public_bytes(serialization.Encoding.PEM))
 
-print("📄 Requisição de certificado (CSR) gerada com sucesso em:", csr_path)
+print(f"✅ Certificado autoassinado gerado em: {CAMINHO_CERTIFICADO}")

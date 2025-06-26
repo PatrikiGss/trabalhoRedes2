@@ -2,19 +2,31 @@ from datetime import datetime
 import socket
 import threading
 import json
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, serialization
+from broker.auth.chaves import GerenciadorChaves
+from broker.auth.assinatura import AssinadorDigital
+from protocolos.envelopamento import Envelopador
+from pathlib import Path
+import base64
+
 
 class Broker:
     def __init__(self):
         self.Topicos_Criados = set()
         self.Topico_Clientes = {}
-        self.Topico_UltimaMensagem = {}  # Para armazenar a última mensagem de cada tópico com timestamp
+        self.Topico_UltimaMensagem = {}
+        self.gerenciador_chaves = GerenciadorChaves()
+        self.chave_privada = self.gerenciador_chaves.carregar_chave_privada()
+        self.certificado_pem = self.gerenciador_chaves.carregar_certificado()
+        caminho_cert = Path("broker/auth/broker.crt")
+        self.certificado_pem = caminho_cert.read_text()
 
     def _get_current_timestamp(self):
-        """Retorna o timestamp formatado"""
         return datetime.now().isoformat()
 
     def _enviar_resposta(self, conexao, dados):
-        """Helper para enviar respostas com timestamp"""
         dados['server_timestamp'] = self._get_current_timestamp()
         try:
             conexao.sendall(json.dumps(dados).encode())
@@ -65,8 +77,7 @@ class Broker:
                         if conexao not in self.Topico_Clientes[topico]:
                             self.Topico_Clientes[topico].append(conexao)
                             print(f"[{self._get_current_timestamp()}] {endereco} se inscreveu no tópico: '{topico}'")
-                            
-                            # Envia a última mensagem do tópico se existir
+
                             if self.Topico_UltimaMensagem[topico]['mensagem']:
                                 self._enviar_resposta(conexao, {
                                     "type": "last_message",
@@ -89,36 +100,51 @@ class Broker:
 
                 elif tipo == "publish":
                     topico = pacote.get("topico")
-                    mensagem = pacote.get("mensagem")
+                    mensagem_criptografada = pacote.get("mensagem")
+                    chave_sim_cript = pacote.get("chave_simetrica")
+
                     if topico in self.Topicos_Criados:
-                        timestamp = self._get_current_timestamp()
-                        print(f"[{timestamp}] Mensagem publicada por {endereco} -> tópico: '{topico}'")
-                        
-                        # Atualiza a última mensagem do tópico
-                        self.Topico_UltimaMensagem[topico] = {
-                            'mensagem': mensagem,
-                            'timestamp': timestamp,
-                            'publisher': str(endereco)
-                        }
-                        
-                        # Prepara a mensagem com timestamp
-                        mensagem_completa = {
-                            "type": "message",
-                            "topico": topico,
-                            "mensagem": mensagem,
-                            "publish_timestamp": timestamp,
-                            "publisher": str(endereco),
-                            "server_timestamp": self._get_current_timestamp()
-                        }
-                        
-                        # Envia para todos os subscribers
-                        for cliente in self.Topico_Clientes.get(topico, []):
-                            try:
-                                cliente.sendall(json.dumps(mensagem_completa).encode())
-                            except (OSError, socket.error):
-                                # Remove clientes desconectados
-                                self.Topico_Clientes[topico].remove(cliente)
-                                pass
+                        try:
+                            from broker.auth.chaves import GerenciadorChaves
+                            from protocolos.envelopamento import Envelopador
+
+                            gerador = GerenciadorChaves(usuario="broker")
+                            chave_privada = gerador.carregar_chave_privada()
+
+                            chave_sim = Envelopador.descriptografar_chave_simetrica(chave_sim_cript, chave_privada)
+                            mensagem_bytes = Envelopador.descriptografar_mensagem(mensagem_criptografada, chave_sim)
+                            mensagem = mensagem_bytes.decode("utf-8")
+
+                            timestamp = self._get_current_timestamp()
+                            print(f"[{timestamp}] Mensagem criptografada recebida de {endereco} -> tópico: '{topico}'")
+
+                            self.Topico_UltimaMensagem[topico] = {
+                                'mensagem': mensagem,
+                                'timestamp': timestamp,
+                                'publisher': str(endereco)
+                            }
+
+                            mensagem_completa = {
+                                "type": "message",
+                                "topico": topico,
+                                "mensagem": mensagem,
+                                "publish_timestamp": timestamp,
+                                "publisher": str(endereco),
+                                "server_timestamp": self._get_current_timestamp()
+                            }
+
+                            for cliente in self.Topico_Clientes.get(topico, []):
+                                try:
+                                    cliente.sendall(json.dumps(mensagem_completa).encode())
+                                except (OSError, socket.error):
+                                    self.Topico_Clientes[topico].remove(cliente)
+
+                        except Exception as e:
+                            print(f"[ERRO] Falha ao processar mensagem criptografada: {e}")
+                            self._enviar_resposta(conexao, {
+                                "status": "error",
+                                "erro": f"Erro ao processar mensagem criptografada: {str(e)}"
+                            })
                     else:
                         self._enviar_resposta(conexao, {
                             "status": "error",
@@ -130,17 +156,25 @@ class Broker:
                     self._enviar_resposta(conexao, {
                         "type": "lista",
                         "topicos": list(self.Topicos_Criados),
-                        "topicos_info": {topico: {
-                            'subscribers': len(self.Topico_Clientes[topico]),
-                            'last_message': self.Topico_UltimaMensagem[topico]['timestamp']
-                        } for topico in self.Topicos_Criados}
+                        "topicos_info": {
+                            topico: {
+                                'subscribers': len(self.Topico_Clientes[topico]),
+                                'last_message': self.Topico_UltimaMensagem[topico]['timestamp']
+                            } for topico in self.Topicos_Criados
+                        }
+                    })
+
+                elif tipo == "cert_request":
+                    print(f"[{self._get_current_timestamp()}] Cliente {endereco} solicitou certificado do broker.")
+                    self._enviar_resposta(conexao, {
+                        "type": "cert_response",
+                        "certificado": self.certificado_pem
                     })
 
             except (json.JSONDecodeError, ConnectionResetError, OSError) as e:
                 print(f"[{self._get_current_timestamp()}] Erro com cliente {endereco}: {str(e)}")
                 break
 
-        # Remove a conexão de todos os tópicos ao desconectar
         for topico, conexoes in self.Topico_Clientes.items():
             if conexao in conexoes:
                 conexoes.remove(conexao)
@@ -156,6 +190,7 @@ class Broker:
         while True:
             conexao, endereco = servidor.accept()
             threading.Thread(target=self.Tratando_Cliente, args=(conexao, endereco)).start()
+
 
 if __name__ == "__main__":
     broker = Broker()

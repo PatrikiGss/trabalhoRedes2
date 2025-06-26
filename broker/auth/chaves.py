@@ -1,4 +1,5 @@
 from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from pathlib import Path
 
@@ -8,7 +9,6 @@ class GerenciadorChaves:
         self.usuario = usuario
         self.priv_path = self.pasta / f"{usuario}_priv.pem"
         self.pub_path = self.pasta / f"{usuario}_pub.pem"
-
         self.pasta.mkdir(parents=True, exist_ok=True)
 
     def gerar_chave_privada(self):
@@ -37,3 +37,8 @@ class GerenciadorChaves:
     def carregar_chave_publica(self):
         with open(self.pub_path, "rb") as f:
             return serialization.load_pem_public_key(f.read())
+        
+    def carregar_certificado(self, caminho_cert="broker/auth/lucas.crt"):
+        from cryptography import x509
+        with open(caminho_cert, "rb") as f:
+            return x509.load_pem_x509_certificate(f.read(), default_backend())

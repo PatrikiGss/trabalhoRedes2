@@ -50,3 +50,6 @@ class Envelopador:
                 label=None
             )
         )
+    @staticmethod
+    def gerar_chave_simetrica(tamanho=32):  # 32 bytes = 256 bits
+        return os.urandom(tamanho)
