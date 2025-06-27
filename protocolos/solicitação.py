@@ -6,8 +6,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 # Caminhos
-CAMINHO_CHAVE_PRIVADA  = Path("broker/auth/broker_priv.pem")
-CAMINHO_CERTIFICADO  = Path("broker/auth/broker.crt")
+CAMINHO_CHAVE_PRIVADA  = Path("cliente/auth/subscriber_priv.pem")
+CAMINHO_CERTIFICADO  = Path("cliente/auth/subscriber.crt")
 
 # 1. Carregar a chave privada
 with open(CAMINHO_CHAVE_PRIVADA, "rb") as f:
