@@ -38,7 +38,7 @@ class GerenciadorChaves:
         with open(self.pub_path, "rb") as f:
             return serialization.load_pem_public_key(f.read())
         
-    def carregar_certificado(self, caminho_cert="broker/auth/lucas.crt"):
+    def carregar_certificado(self, caminho_cert="broker/auth/broker.crt"):
         from cryptography import x509
         with open(caminho_cert, "rb") as f:
             return x509.load_pem_x509_certificate(f.read(), default_backend())

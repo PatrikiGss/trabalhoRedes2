@@ -6,11 +6,6 @@ __pycache__/
 *.tar.gz
 *.pdf
 venv/
-# Não versionar chaves privadas
-*.pem
-!broker_pub.pem
-!*.csr
-# Não versionar chaves privadas
 *.pem
 !broker_pub.pem
 !*.csr
